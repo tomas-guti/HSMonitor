@@ -5,10 +5,10 @@ hardware en una ventana principal y, en fases posteriores, en un overlay.
 
 ## Estado
 
-La solución contiene la base compilable de la fase 1: una biblioteca de dominio
-sin dependencias de WPF, una aplicación WPF oscura y una suite de pruebas para
-la configuración del intervalo de muestreo. **Todavía no lee sensores** y no
-presenta datos simulados como reales.
+La solución contiene las fases 1 y 2: Core independiente, anfitrión WPF,
+adaptador de hardware LibreHardwareMonitor y un motor de muestreo cancelable
+con snapshots compartidos. El motor todavía no está conectado a la UI; la
+ventana no presenta métricas ni datos simulados.
 
 ## Requisitos y compilación
 
@@ -22,25 +22,38 @@ Desde PowerShell, en la raíz del repositorio:
 
 ```powershell
 dotnet restore .\HardwareMonitor.sln
-dotnet build .\HardwareMonitor.sln --configuration Release --no-restore
-dotnet test .\HardwareMonitor.sln --configuration Release --no-build
+dotnet build .\HardwareMonitor.sln --configuration Release
+dotnet test .\HardwareMonitor.sln --configuration Release
 dotnet run --project .\src\HardwareMonitor.App\HardwareMonitor.App.csproj
 ```
 
-La ventana inicial indica que todavía no hay adquisición de sensores. El
-intervalo de muestreo base es 1000 ms y el modelo rechaza valores fuera de
-250–60000 ms para prevenir configuraciones accidentales extremas; el motor que
-aplicará esa configuración se implementará en la fase 2.
+El servicio se crea con una instancia de `MonitoringService` y una fuente
+`LibreHardwareMonitorSource`. `StartAsync` inicia un solo worker y
+`CurrentSnapshot` expone el estado inmutable más reciente a todos los
+consumidores de esa instancia. `StopAsync` cancela y espera el ciclo activo;
+`DisposeAsync` también cierra el adaptador. El muestreo comienza inmediatamente
+y espera el intervalo configurado al finalizar cada ciclo. El valor inicial es
+1000 ms, con límites de 250–60000 ms. La fuente de hardware es síncrona; el
+motor la ejecuta fuera del hilo UI. Cada servicio se inicia una sola vez; para
+reanudar tras detenerlo se crea una instancia nueva.
 
 ## Sensores y permisos
 
-LibreHardwareMonitor es el candidato inicial para la fase de hardware: la
-versión estable consultada es `0.9.6`, su licencia principal es MPL-2.0 y el
-proyecto declara compatibilidad con .NET 10. Algunos accesos a sensores
-requieren privilegios de administrador según su documentación. La aplicación
-no se elevará por defecto; se identificarán claramente los sensores no
-disponibles y los permisos concretos necesarios. La biblioteca y sus
-dependencias no forman parte todavía de esta solución.
+La infraestructura fija LibreHardwareMonitorLib `0.9.6` (MPL-2.0; grupo
+`net10.0` en su nuspec). La aplicación no se eleva por defecto ni solicita
+permisos. Si el hardware o sus drivers deniegan acceso, el motor publica un
+issue `AccessDenied`/`HardwareUnavailable` sin detener la lectura de otros
+dispositivos. La disponibilidad depende del hardware, firmware, drivers y
+permisos del equipo; no se garantiza una categoría concreta. Un valor nulo se
+marca no disponible; cero es una lectura válida. Ver
+[THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md) para el cierre transitivo y
+los avisos de licencia.
+
+Las llamadas de LibreHardwareMonitor no admiten cancelación mientras una
+operación de driver está en curso. El servicio revisa cancelación entre
+dispositivos y espera la operación activa antes de liberar la fuente. La UI
+actual no inicia el motor, y esta implementación no ha sido probada contra
+sensores físicos.
 
 No se implementan FPS, frametimes ni integración con procesos de juegos. No se
 inyecta código en juegos.

@@ -2,9 +2,11 @@
 
 ## Estado de las mediciones
 
-No hay mediciones de CPU, memoria, tiempo de inicio ni frecuencia de
-actualización: esta fase todavía no lee sensores. No se hacen afirmaciones de
-consumo frente a NZXT CAM ni otros productos.
+No se han tomado mediciones de CPU, memoria, tiempo de inicio ni frecuencia
+real de adquisición. El motor ya está implementado, pero la ventana todavía no
+lo inicia y esta validación no realizó una sesión de lectura sobre hardware
+físico. No se hacen afirmaciones de consumo frente a NZXT CAM ni otros
+productos.
 
 ## Protocolo para la fase 6
 
@@ -23,5 +25,6 @@ consumo frente a NZXT CAM ni otros productos.
    sensores disponibles y condiciones; describir diferencias de funcionalidad
    y configuración.
 
-La frecuencia real solo puede medirse cuando exista el motor de muestreo. Las
-pruebas de unidad no sustituyen estas mediciones en Windows.
+La frecuencia real puede medirse ahora sobre una ejecución Release del motor,
+registrando el intervalo configurado, número de ciclos y tiempos de lectura.
+Las pruebas de unidad no sustituyen estas mediciones en Windows.
